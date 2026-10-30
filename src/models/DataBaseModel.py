@@ -1,0 +1,6 @@
+from helpers import Settings, get_settings
+
+class DataBaseModel:
+    def __init__(self, db_client: object):
+        self.db_client = db_client
+        self.app_settings = get_settings()

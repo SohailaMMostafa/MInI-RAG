@@ -6,12 +6,18 @@ import os
 import re
 
 class DataController(BaseController):
+    """
+    Handles everything related to uploaded files:
+        - validating the file (type and size)
+        - cleaning the file name
+        - generating a unique path to store the file on disk
+    """
     def __init__(self):
         super().__init__()
         self.size_scale = 1048576  # 1 MB in bytes  
 
     def validate_uploaded_file(self, file: UploadFile):
-
+        #Check that the uploaded file has an allowed type and is not too large.
         if file.content_type not in self.app_settings.FILE_ALLOWED_TYPES:
             return False, ResponseSignal.FILE_TYPE_NOT_SUPPORTED.value
 
@@ -20,10 +26,20 @@ class DataController(BaseController):
 
         return True, ResponseSignal.FILE_VALIDATED_SUCCESS.value
 
-    #Clean the file name to remove any special characters and spaces
-    # Generate a unique file path for the uploaded file
-    def generate_unique_filepath(self, orig_file_name: str, project_id: str):
 
+    def generate_unique_filepath(self, orig_file_name: str, project_id: str):
+        """
+        Build a unique path where the uploaded file will be saved.
+
+        The file name is cleaned and prefixed with a random key, so two files
+        with the same original name never overwrite each other.
+
+        Example:
+            "my report.pdf" -> "<project_path>/a1b2c3_myreport.pdf"
+
+        Returns:
+            (str, str): (full file path, file name with the random prefix)
+        """
         random_key = self.generate_random_string()
         project_path = ProjectController().get_project_path(project_id=project_id)
 

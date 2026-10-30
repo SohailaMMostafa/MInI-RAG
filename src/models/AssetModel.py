@@ -1,9 +1,9 @@
-from .BaseDataModel import BaseDataModel
+from .DataBaseModel import DataBaseModel
 from .db_schemes import Asset 
 from .enums.DataBaseEnums import DataBaseEnums
 from bson import ObjectId
 
-class AssetModel(BaseDataModel):
+class AssetModel(DataBaseModel):
     def __init__(self, db_client: object):
         super().__init__(db_client)
         self.collection = self.db_client[DataBaseEnums.COLLECTION_ASSET_NAME.value]

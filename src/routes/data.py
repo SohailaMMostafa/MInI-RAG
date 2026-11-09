@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, status, Request
 from fastapi.responses import JSONResponse
 from helpers import get_settings, Settings
-from controlles import DataController, ProjectController, ProcessController
+from controllers import DataController, ProjectController, ProcessController
 from .schemes.data import processRequest
 from models import ProjectModel, ChunkModel, AssetModel, ResponseSignal
 from models.db_schemes import DataChunk, Asset

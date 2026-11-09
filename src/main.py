@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import base, data
+from routes import base, data, nlp
 from motor.motor_asyncio import AsyncIOMotorClient
 from helpers.config import get_settings
 from stores.llm.LLMFactory import LLMFactory
@@ -10,8 +10,8 @@ app = FastAPI()
 
 async def startup():
     settings = get_settings()
-    app.mongo_conn = AsyncIOMotorClient(settings.MONGODB_URL)
-    app.db_client = app.mongo_conn[settings.MONGODB_DATABASE]
+    app.mongo_conn = AsyncIOMotorClient(settings.MONGO_URI)
+    app.db_client = app.mongo_conn[settings.MONGO_DB_NAME]
 
     llmFactory = LLMFactory(settings)
     vdbFactory = VDBFactory(settings)
@@ -31,10 +31,11 @@ async def startup():
 
 async def shutdown():
     app.mongo_conn.close()
-    app.vectordb_client.dissconnect()
+    app.vectordb_client.disconnect()
 
-app.router.lifespan.on_startup.append(startup)
-app.router.lifespan.on_shutdown.append(shutdown)
+app.on_event("startup")(startup)
+app.on_event("shutdown")(shutdown)
 
 app.include_router(base.base_router)
 app.include_router(data.data_router)
+app.include_router(nlp.nlp_router)

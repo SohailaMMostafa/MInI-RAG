@@ -3,6 +3,7 @@ from models.db_schemes import Project, DataChunk
 from stores.llm.LLMEnums import DocumentTypeEnum
 from typing import List
 import json
+from langdetect import detect
 
 class NLPController(BaseController):
 
@@ -88,47 +89,50 @@ class NLPController(BaseController):
 
         return results
     
-    def answer_rag_question(self, project: Project, query: str, limit: int = 10):
-        
-        answer, full_prompt, chat_history = None, None, None
+    def answer_rag_question(self, project: Project, query: str, limit: int = 5):
+            
+            answer= None
+            full_prompt = None
+            chat_history = None
 
-        # step1: retrieve related documents
-        retrieved_documents = self.search_vector_db_collection(
-            project=project,
-            text=query,
-            limit=limit,
-        )
-
-        if not retrieved_documents or len(retrieved_documents) == 0:
-            return answer, full_prompt, chat_history
-        
-        # step2: Construct LLM prompt
-        system_prompt = self.template_parser.get("rag", "system_prompt")
-
-        documents_prompts = "\n".join([
-            self.template_parser.get("rag", "document_prompt", {
-                    "doc_num": idx + 1,
-                    "chunk_text": doc.text,
-            })
-            for idx, doc in enumerate(retrieved_documents)
-        ])
-
-        footer_prompt = self.template_parser.get("rag", "footer_prompt")
-
-        # step3: Construct Generation Client Prompts
-        chat_history = [
-            self.generation_client.construct_prompt(
-                prompt=system_prompt,
-                role=self.generation_client.enums.SYSTEM.value,
+            # step1: retrieve related documents
+            retrieved_documents = self.search_vector_db_collection(
+                project=project,
+                text=query,
+                limit=limit,
             )
-        ]
 
-        full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+            if not retrieved_documents or len(retrieved_documents) == 0:
+                return answer, full_prompt, chat_history
+            
+            # step2: Construct LLM prompt
+            system_prompt = self.template_parser.get("rag", "system_prompt")
 
-        # step4: Retrieve the Answer
-        answer = self.generation_client.generate_text(
-            prompt=full_prompt,
-            chat_history=chat_history
-        )
+            documents_prompts = "\n".join([
+                self.template_parser.get("rag", "document_prompt", {
+                        "doc_num": idx + 1,
+                        "chunk_text": doc.text,
+                })
+                for idx, doc in enumerate(retrieved_documents)
+            ])
 
-        return answer, full_prompt, chat_history
+            lang = "Arabic" if detect(query) == "ar" else "English"
+            footer_prompt = self.template_parser.get("rag", "footer_prompt", {"query": query, "language": lang})
+
+            # step3: Construct Generation Client Prompts
+            chat_history = [
+                self.generation_client.construct_prompt(
+                    prompt=system_prompt,
+                    role=self.generation_client.enums.SYSTEM.value,
+                )
+            ]
+
+            full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+
+            # step4: Retrieve the Answer
+            answer = self.generation_client.generate_text(
+                prompt=full_prompt,
+                chat_history=chat_history
+            )
+
+            return answer, full_prompt, chat_history

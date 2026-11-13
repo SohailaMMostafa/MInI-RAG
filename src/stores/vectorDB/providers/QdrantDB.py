@@ -3,6 +3,7 @@ from ..VDBInterface import VDBInterface
 from ..VDBEnums import Distance
 import logging
 from typing import List
+from models.db_schemes import RetrivedDocument
 
 class QdrantDB(VDBInterface):
 
@@ -128,11 +129,20 @@ class QdrantDB(VDBInterface):
         
     def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
 
-        result = self.client.query_points(
+        results = self.client.query_points(
             collection_name=collection_name,
             query=vector,
             limit=limit,
             with_payload=True
         )
 
-        return result.points
+        if not results or len(results.points) == 0:
+            return None
+
+        return[
+            RetrivedDocument(**{
+                "text": point.payload.get("text", ""),
+                "score": point.score
+            })
+            for point in results.points
+        ]
